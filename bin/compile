@@ -12,6 +12,12 @@ function indent() {
 
 unset GIT_DIR
 
+if [ -f $1/bin/pre_build ]; then
+    echo "-----> Running pre-build hook"
+    chmod +x $1/bin/pre_build
+    $1/bin/pre_build $1 $2
+fi
+
 for BUILDPACK in $(cat $1/.buildpacks); do
   dir=$(mktemp -t buildpackXXXXX)
   rm -rf $dir
@@ -62,6 +68,12 @@ for BUILDPACK in $(cat $1/.buildpacks); do
     fi
   fi
 done
+
+if [ -f $1/bin/post_build ]; then
+    echo "-----> Running post-build hook"
+    chmod +x $1/bin/post_build
+    $1/bin/post_build $1 $2
+fi
 
 if [ -e $1/last_pack_release.out ]; then
   echo "Using release configuration from last framework ($framework)."
