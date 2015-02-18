@@ -10,12 +10,27 @@ function indent() {
   esac
 }
 
+
+export_env_dir() {
+  env_dir=$1
+  whitelist_regex=${2:-''}
+  blacklist_regex=${3:-'^(PATH|GIT_DIR|CPATH|CPPATH|LD_PRELOAD|LIBRARY_PATH)$'}
+  if [ -d "$env_dir" ]; then
+    for e in $(ls $env_dir); do
+      echo "$e" | grep -E "$whitelist_regex" | grep -qvE "$blacklist_regex" &&
+      export "$e=$(cat $env_dir/$e)"
+      :
+    done
+  fi
+}
+
+
 unset GIT_DIR
 
 if [ -f $1/bin/pre_build ]; then
     echo "-----> Running pre-build hook"
     chmod +x $1/bin/pre_build
-    $1/bin/pre_build $1 $2
+    (export_env_dir $3 && $1/bin/pre_build $1 $2)
 fi
 
 for BUILDPACK in $(cat $1/.buildpacks); do
@@ -72,7 +87,7 @@ done
 if [ -f $1/bin/post_build ]; then
     echo "-----> Running post-build hook"
     chmod +x $1/bin/post_build
-    $1/bin/post_build $1 $2
+    (export_env_dir $3 && $1/bin/post_build $1 $2)
 fi
 
 if [ -e $1/last_pack_release.out ]; then
